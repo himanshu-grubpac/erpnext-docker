@@ -2,9 +2,18 @@
 #   docker compose -f docker-compose.yml -f docker-compose.hrms.yml up -d
 #
 # Requires ./apps/hrms (version-16 clone) on the host before first up.
+#
+# On every start, sync-hrms-assets.sh copies HRMS public files into
+# sites/assets/hrms (backend and frontend have separate asset volumes).
 
 x-frappe-image: &frappe_image
   image: ${ERPNEXT_IMAGE:-frappe/erpnext:v16.18.2}
+
+x-hrms-volumes: &hrms_volumes
+  - sites:/home/frappe/frappe-bench/sites
+  - logs:/home/frappe/frappe-bench/logs
+  - ./apps/hrms:/home/frappe/frappe-bench/apps/hrms
+  - ./scripts/sync-hrms-assets.sh:/usr/local/bin/sync-hrms-assets.sh:ro
 
 services:
   backend:
@@ -13,18 +22,22 @@ services:
       [
         "bash",
         "-c",
-        "cd /home/frappe/frappe-bench && ./env/bin/pip install -q -e apps/hrms && exec bench serve --port 8000",
+        "cd /home/frappe/frappe-bench && ./env/bin/pip install -q -e apps/hrms && bash /usr/local/bin/sync-hrms-assets.sh && exec bench serve --port 8000",
       ]
-    volumes:
-      - sites:/home/frappe/frappe-bench/sites
-      - logs:/home/frappe/frappe-bench/logs
-      - ./apps/hrms:/home/frappe/frappe-bench/apps/hrms
+    volumes: *hrms_volumes
 
   frontend:
     <<: *frappe_image
+    command:
+      [
+        "bash",
+        "-c",
+        "bash /usr/local/bin/sync-hrms-assets.sh && exec nginx-entrypoint.sh",
+      ]
     volumes:
       - sites:/home/frappe/frappe-bench/sites
       - ./apps/hrms:/home/frappe/frappe-bench/apps/hrms
+      - ./scripts/sync-hrms-assets.sh:/usr/local/bin/sync-hrms-assets.sh:ro
 
   websocket:
     <<: *frappe_image
@@ -37,10 +50,7 @@ services:
         "-c",
         "cd /home/frappe/frappe-bench && ./env/bin/pip install -q -e apps/hrms && exec bench worker --queue default",
       ]
-    volumes:
-      - sites:/home/frappe/frappe-bench/sites
-      - logs:/home/frappe/frappe-bench/logs
-      - ./apps/hrms:/home/frappe/frappe-bench/apps/hrms
+    volumes: *hrms_volumes
 
   queue-short:
     <<: *frappe_image
@@ -50,10 +60,7 @@ services:
         "-c",
         "cd /home/frappe/frappe-bench && ./env/bin/pip install -q -e apps/hrms && exec bench worker --queue short",
       ]
-    volumes:
-      - sites:/home/frappe/frappe-bench/sites
-      - logs:/home/frappe/frappe-bench/logs
-      - ./apps/hrms:/home/frappe/frappe-bench/apps/hrms
+    volumes: *hrms_volumes
 
   queue-long:
     <<: *frappe_image
@@ -63,10 +70,7 @@ services:
         "-c",
         "cd /home/frappe/frappe-bench && ./env/bin/pip install -q -e apps/hrms && exec bench worker --queue long",
       ]
-    volumes:
-      - sites:/home/frappe/frappe-bench/sites
-      - logs:/home/frappe/frappe-bench/logs
-      - ./apps/hrms:/home/frappe/frappe-bench/apps/hrms
+    volumes: *hrms_volumes
 
   scheduler:
     <<: *frappe_image
@@ -76,7 +80,4 @@ services:
         "-c",
         "cd /home/frappe/frappe-bench && ./env/bin/pip install -q -e apps/hrms && exec bench schedule",
       ]
-    volumes:
-      - sites:/home/frappe/frappe-bench/sites
-      - logs:/home/frappe/frappe-bench/logs
-      - ./apps/hrms:/home/frappe/frappe-bench/apps/hrms
+    volumes: *hrms_volumes

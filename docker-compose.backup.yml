@@ -1,0 +1,31 @@
+# Optional backup scheduler — runs backup-erpnext.sh daily inside Docker.
+# Requires: AWS CLI credentials on the host (~/.aws) and Docker socket access.
+#
+# Start:
+#   docker compose -f docker-compose.yml -f docker-compose.hrms.yml -f docker-compose.backup.yml up -d backup-scheduler
+
+services:
+  backup-scheduler:
+    image: alpine:3.20
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./:/erpnext:ro
+      - ./scripts/backup-erpnext.sh:/usr/local/bin/backup-erpnext.sh:ro
+      - ${BACKUP_DIR:-/home/ubuntu/backups}:/backups
+      - ${HOME}/.aws:/root/.aws:ro
+    environment:
+      ERP_DIR: /erpnext
+      BACKUP_DIR: /backups
+      SITE_NAME: ${SITE_NAME:-erp.localhost}
+      S3_BUCKET: ${S3_BUCKET:-s3://grubpac-erpnext-backups}
+      LOCAL_RETENTION_DAYS: ${LOCAL_RETENTION_DAYS:-7}
+      S3_RETENTION_DAYS: ${S3_RETENTION_DAYS:-30}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        apk add --no-cache docker-cli aws-cli bash findutils coreutils
+        chmod +x /usr/local/bin/backup-erpnext.sh
+        echo "0 2 * * * ERP_DIR=/erpnext BACKUP_DIR=/backups /usr/local/bin/backup-erpnext.sh >> /backups/backup.log 2>&1" > /etc/crontabs/root
+        echo "Backup scheduler started (daily 02:00 UTC)"
+        crond -f -l 2
