@@ -3,8 +3,21 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ERP_DIR="${ERP_DIR:-$(dirname "${SCRIPT_DIR}")}"
+
+# Script may live in ~/erpnext/scripts/ or /home/ubuntu/backup-erpnext.sh
+if [[ -n "${ERP_DIR:-}" ]]; then
+	:
+elif [[ "${SCRIPT_DIR}" == */scripts && -f "${SCRIPT_DIR}/../docker-compose.yml" ]]; then
+	ERP_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+else
+	ERP_DIR="/home/ubuntu/erpnext"
+fi
+
 cd "${ERP_DIR}"
+if [[ ! -f docker-compose.yml ]]; then
+	echo "ERROR: docker-compose.yml not found in ${ERP_DIR}" >&2
+	exit 1
+fi
 
 if [[ -f .env ]]; then
 	set -a

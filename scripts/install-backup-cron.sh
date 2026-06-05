@@ -14,10 +14,10 @@ cp "${SCRIPT_DIR}/backup-erpnext.sh" "${TARGET_SCRIPT}"
 chmod +x "${TARGET_SCRIPT}"
 
 CRON_LINE="${CRON_SCHEDULE} ERP_DIR=${ERP_DIR} ${TARGET_SCRIPT} >> ${BACKUP_DIR}/backup.log 2>&1"
-( crontab -l 2>/dev/null | grep -v "${TARGET_SCRIPT}" || true
+( sudo crontab -l 2>/dev/null | grep -v "${TARGET_SCRIPT}" || true
 	echo "${CRON_LINE}"
-) | crontab -
+) | sudo crontab -
 
 echo "Cron installed:"
-crontab -l | grep "${TARGET_SCRIPT}"
+sudo crontab -l | grep "${TARGET_SCRIPT}"
 echo "Logs: ${BACKUP_DIR}/backup.log"
