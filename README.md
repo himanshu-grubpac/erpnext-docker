@@ -70,6 +70,10 @@ Requires `~/.aws` credentials on the host.
 aws s3 ls s3://grubpac-erpnext-backups/
 ```
 
+## Command reference
+
+See **[COMMANDS.md](COMMANDS.md)** for day-to-day operations: start/stop, health checks, database access, backups, logs, and troubleshooting.
+
 ## Important
 
 - Site data lives in Docker volumes (`sites`, `db-data`), not in git
