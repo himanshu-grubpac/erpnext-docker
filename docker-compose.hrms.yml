@@ -22,6 +22,9 @@ services:
 
   frontend:
     <<: *frappe_image
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+      - ./apps/hrms:/home/frappe/frappe-bench/apps/hrms
 
   websocket:
     <<: *frappe_image
